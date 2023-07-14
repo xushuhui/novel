@@ -152,23 +152,21 @@ func search(c *cli.Context) error {
 }
 func getBookInfo(id string) (info *BookInfo, err error) {
 	endpoint := fmt.Sprintf("%s/book/%s", baseURL, id)
-
-	err = requests.URL(endpoint).ToJSON(info).Fetch(context.Background())
-
+	var book BookInfo
+	err = requests.URL(endpoint).ToJSON(&book).Fetch(context.Background())
 	if err != nil {
 		return nil, cli.Exit(fmt.Sprintf("Failed to get book info: %s", err), 1)
 	}
 
-	return
+	return &book, nil
 }
 func info(c *cli.Context) error {
 	bookID := c.Args().Get(0)
 	if bookID == "" {
 		return cli.ShowCommandHelp(c, "info")
 	}
-
-	info, _ := getBookInfo(bookID)
-
+	info, err := getBookInfo(bookID)
+	fmt.Printf("err: %v\n", err)
 	results := map[string]*BookInfo{"info": info}
 	resultsJSON, _ := json.MarshalIndent(results, "", "  ")
 	fmt.Println(string(resultsJSON))
@@ -182,7 +180,10 @@ func chapter(c *cli.Context) error {
 		return cli.ShowCommandHelp(c, "chapter")
 	}
 
-	chapters, _ := getChapterCount(bookID)
+	chapters, err := getChapterCount(bookID)
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+	}
 	results := map[string]ChapterList{"chapters": chapters.MixToc}
 	resultsJSON, _ := json.MarshalIndent(results, "", "  ")
 	fmt.Println(string(resultsJSON))
@@ -254,20 +255,20 @@ func download(c *cli.Context) error {
 
 func getChapterCount(bookID string) (r *ChapterResp, err error) {
 	endpoint := fmt.Sprintf("%s/content/%s", baseURL, bookID)
-
-	err = requests.URL(endpoint).ToJSON(r).Fetch(context.Background())
+	var info ChapterResp
+	err = requests.URL(endpoint).ToJSON(&info).Fetch(context.Background())
 
 	if err != nil {
 		return nil, cli.Exit(fmt.Sprintf("Failed to get chapter list: %s", err), 1)
 	}
 
-	return
+	return &info,nil
 }
 
 func getChapterContent(bookID string, chapterIndex int) (c Content, err error) {
 	endpoint := fmt.Sprintf("%s/chapter/%s/%d", baseURL, bookID, chapterIndex)
-	var r *ContentResp
-	err = requests.URL(endpoint).ToJSON(r).Fetch(context.Background())
+	var r ContentResp
+	err = requests.URL(endpoint).ToJSON(&r).Fetch(context.Background())
 
 	if err != nil {
 		return c, cli.Exit(fmt.Sprintf("Failed to get chapter list: %s", err), 1)
